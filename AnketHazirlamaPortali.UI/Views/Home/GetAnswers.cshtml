@@ -1,0 +1,65 @@
+﻿@{
+    ViewData["Title"] = "Answers";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container">
+    <h1>Cevaplar</h1>
+    <div id="answersContainer" class="mt-4">
+        <!-- Cevaplar burada listelenecek -->
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            var apiBaseUrl = "@ViewBag.ApiBaseUrl";
+            var questionId = "@ViewBag.QuestionId";
+            var token = localStorage.getItem("token");
+            // Cevapları alacak fonksiyon
+            function getAnswers() {
+                $.ajax({
+                    url: "https://localhost:7168/api/Question/"+ questionId +"/Answers",
+                    method: "GET",
+                    headers: {
+                        "Authorization": "Bearer " + token
+                    },
+                    contentType: "application/json",
+                    success: function (data) {
+                        displayAnswers(data); // Cevapları görüntüleme işlevini çağırın
+                    },
+                    error: function () {
+                        console.error('Cevaplar alınamadı.');
+                    }
+                });
+            }
+
+            // Cevapları görüntüleme işlevi
+            function displayAnswers(answers) {
+                var answersContainer = $("#answersContainer");
+                answersContainer.empty(); // Önceki içeriği temizle
+
+                // Cevapları listeleyin
+                if (Array.isArray(answers)) { // Verinin bir dizi olup olmadığını kontrol edin
+                    $.each(answers, function (index, answer) {
+                        var answerHtml = '<div class="card mb-3">';
+                        answerHtml += '<div class="card-body">';
+                        answerHtml += '<h5 class="card-title">Cevap ID: ' + answer.id + '</h5>';
+                        answerHtml += '<p class="card-text">Kullanıcı ID: ' + answer.userId + '</p>';
+                        answerHtml += '<p class="card-text">Metin Cevabı: ' + answer.textAnswer + '</p>';
+                        answerHtml += '</div>';
+                        answerHtml += '</div>';
+                        answersContainer.append(answerHtml);
+                    });
+                } else {
+                    console.error('Cevaplar bir dizi değil.');
+                    console.log(answers);
+                }
+            }
+
+
+            // Sayfa yüklendiğinde cevapları al
+            getAnswers();
+        });
+    </script>
+}

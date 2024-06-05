@@ -1,0 +1,94 @@
+﻿@{
+    Layout = "~/Views/Shared/_LogLayout.cshtml";
+}
+
+<div class="row mt-5">
+    <div class="col-md-4"></div>
+    <div class="col-md-4"  >
+        <div class="card text-white mb-2" style="background-color:#5a5c69">
+            <div class="card-header mt-2 text-white" style="background-color:#5a5c69"><h3>Kaydol</h3></div>
+            <div class="card-body" style="background-color:#5a5c69">
+                <div class="mb-2">
+                    <label class="mb-1">Tam Adı</label>
+                    <input type="text" class="form-control" id="txtFullName" />
+                </div>
+                <div class="mb-2">
+                    <label class="mb-1">Kullanıcı Adı</label>
+                    <input type="text" class="form-control" id="txtUserName" />
+                </div>
+                <div class="mb-2">
+                    <label class="mb-1">E-Posta Adresi</label>
+                    <input type="email" class="form-control" id="txtEmail" />
+                </div>
+                <div class="mb-2">
+                    <label class="mb-1">Parola</label>
+                    <input type="password" class="form-control" id="txtPassword" />
+                </div>
+                <div class="mb-2">
+                    <label class="mb-1">Parola Tekrarı</label>
+                    <input type="password" class="form-control" id="txtPasswordConfirm" />
+                </div>
+            </div>
+            <div class="card-footer" style="background-color:#5a5c69">
+                <button class="btn btn-light" id="btnSignUp">Kaydol</button>
+                <button class="btn btn-light"><a asp-action="Login" class="link-dark" style="text-decoration:none">Oturum Aç</a></button>
+            </div>
+        </div>
+        <div id="result"></div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            var ApiBaseUrl = "@ViewBag.ApiBaseUrl";
+            $("#btnSignUp").click(function () {
+                console.log("a")
+                var username = $("#txtUserName").val();
+                var password = $("#txtPassword").val();
+                var fullname = $("#txtFullName").val();
+                var passwordconfirm = $("#txtPasswordConfirm").val();
+                var email = $("#txtEmail").val();
+
+                if (username == "" || password == "" || fullname == "" || email == "" || passwordconfirm == "") {
+                    $("#divResult")
+                        .show()
+                        .removeClass()
+                        .addClass("alert alert-danger")
+                        .html("Tüm Alanları Doldurunuz!")
+                        .fadeOut(5000);
+                    return false;
+                }
+                var register = new Object();
+                register.Id = "1";
+                register.UserName = username;
+                register.Password = password;
+                register.FullName = fullname;
+                register.PasswordConfirm = passwordconfirm;
+                register.Email = email;
+
+                $.ajax({
+                    url: ApiBaseUrl + "User/Add",
+                    method: "POST",
+                    data: JSON.stringify(register),
+                    contentType: "application/json",
+                    success: function (data) {
+                        if (data.status) {
+                            location.href = "Login";
+                        }
+                    },
+                    error: function (e) {
+                        console.log(e);
+                        $("#result")
+                            .show()
+                            .removeClass()
+                            .addClass("alert alert-danger")
+                            .html("Bir hata oluştu. Lütfen tekrar deneyin.")
+                            .fadeOut(10000);
+                    }
+                });
+
+            });
+        });
+    </script>
+}

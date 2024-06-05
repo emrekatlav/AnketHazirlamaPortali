@@ -1,0 +1,265 @@
+﻿
+@{
+    ViewData["Title"] = "Questions";
+}
+
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card shadow mb-4">
+            <div class="card-body">
+                <h1>Sorular</h1>
+                <div class="b-2">
+        <div id="progress">
+        <div class="table-responsive">
+        <div><span id="surveyName"></span></div>
+        <table class="table table-bordered table-hover" id="tbQuestionList">
+            <thead>
+                <tr>
+                    
+
+                    <th>Soru Adı</th> 
+                    <th>İşlemler</th>
+                </tr>
+            </thead>
+
+            <tbody>
+            </tbody>
+        </table>
+        </div>
+        </div>
+        </div>
+        </div>
+        </div>
+        </div>
+
+        <div class="col-md-4">
+        
+        <div class="card shadow mb-4" >
+        <div class="card-body">
+                <h4 id="editHeader">Soru Ekle</h4>
+        <div class="b-2">
+            <label>Soru Adı</label>
+            <input type="text" class="form-control" id="txtQuestion" />
+            <input type="hidden" id="txtId" />
+        </div>
+        <div class="b-2">
+            <label>Anket Adı</label>
+            <select class="form-select" id="cbSurvey"> 
+            </select>
+
+        </div>
+        
+        <div class="mb-2">
+              <a id="btnSave" class="btn btn-secondary btn-circle ml-1" title="Kaydet"><i class="fas fa-save"></i></a>
+              <a id="btnEdit" class="btn btn-secondary btn-circle" title="Düzenle"><i class="fas fa-edit"></i></a>
+              <a id="btnDelete" class="btn btn-danger btn-circle" title="Sil"><i class="fas fa-trash"></i></a>
+              <a id="btnCancel" class="btn btn-warning btn-circle" title="Vazgeç"><i class="fas fa-arrow-left"></i></a>
+        </div>
+
+        <div id="result"></div>
+        </div>
+        </div>
+
+
+
+
+
+
+    </div>
+    </div>
+
+@section Scripts{
+        <script>
+            $(document).ready(function () {
+                var ApiBaseUrl = "@ViewBag.ApiBaseUrl";
+                var surveyId = "@ViewBag.SurveyId"; 
+                SurveyList(); 
+                SurveyById();
+                QuestionList();
+                $("#btnEdit").hide();
+                $("#btnDelete").hide();
+                $("#btnCancel").hide();
+
+                // Sayfa yüklendiğinde çalışacak fonksiyonlar
+                
+
+
+                // Anketleri listelemek için AJAX isteği
+                function SurveyList() {
+                    $.ajax({
+                        url: ApiBaseUrl + "Survey",
+                        method: "GET",
+                        headers: {
+                            "Authorization": "Bearer " + token
+                        },
+                        contentType: "application/json",
+                        success: function (data) {
+                            var opt = "";
+                            $("#cbSurvey").empty();
+                            $.each(data, function (i, item) {
+
+                                    if (surveyId == item.id) {
+                                            opt = '<option value="' + item.id + '" selected>' + item.name + '</option>';
+                                        } else {
+                                            opt = '<option value="' + item.id + '">' + item.name + '</option>';
+                                        }
+                                
+                                $("#cbSurvey").append(opt);
+                            });
+                        },
+                        error: function () { }
+                    });
+                }
+
+                // Seçilen anketin adını getiren fonksiyon
+                function SurveyById() {
+                    $.ajax({
+                        url: ApiBaseUrl + "Survey/" + surveyId,
+                        method: "GET",
+                        headers: {
+                            "Authorization": "Bearer " + token
+                        },
+                        contentType: "application/json",
+                        success: function (data) {
+                            $("#surveyName").html("<b>" + data.name + "</b>");
+                        },
+                        error: function () { }
+                    });
+                }
+
+                function QuestionList() {
+                    $.ajax({
+                        url: ApiBaseUrl + "Survey/" + surveyId + "/Questions",
+                        method: "GET",
+                        headers: {
+                            "Authorization": "Bearer " + token
+                        },
+                        contentType: "application/json",
+                        success: function (data) {
+                            QuestionListToTable(data);
+                        },
+                        error: function () { }
+                    });
+                }
+
+                // Soruları tabloya ekleyen fonksiyon
+            function QuestionListToTable(data) {
+                $("#tbQuestionList tbody").empty();
+                var tr = '';
+                $.each(data, function (i, item) {
+                    var link = "https://" + location.host + "/Questions/" + item.id + "/Answers";
+                    tr += '<tr><td>' + item.text + '</td><td><button class="btn btn-secondary btn-circle btn-sm  edit" id=' + item.id + ' title="Düzenle"><i class="fas fa-edit"></i></button><a href="' + link + '"><button type="button" class="btn btn-secondary  ml-2">Cevapları Görüntüle</button></a></td></tr>';
+                });
+                $("#tbQuestionList tbody").append(tr);
+            }
+
+
+                // Soru kaydetme işlemi için click eventi
+                $("#btnSave").click(function () {
+                    var text = $("#txtQuestion").val();
+                    var surveyId = $("#cbSurvey").val();
+                    var question = { Text: text, SurveyId: surveyId,};
+
+                    $.ajax({
+                        url: ApiBaseUrl + "Question",
+                        method: "POST",
+                        headers: {
+                            "Authorization": "Bearer " + token
+                        },
+                        data: JSON.stringify(question),
+                        contentType: "application/json",
+                        success: function (data) {
+                            $("#txtQuestion").val("");
+                            $("#result").show().removeClass().addClass(data.status ? "alert alert-success" : "alert alert-danger").html(data.message);
+                            QuestionList();
+                            $("#result").fadeOut(3000);
+                            
+                        },
+                        error: function () { }
+                    });
+                });
+
+                // Düzenleme butonuna tıklama eventi
+                $(document).on("click", ".edit", function () {
+                    var id = $(this).attr("id");
+                    $.ajax({
+                        url: ApiBaseUrl + "Question/" + id,
+                        method: "GET",
+                        headers: {
+                            "Authorization": "Bearer " + token
+                        },
+                        contentType: "application/json",
+                        success: function (data) {
+                            $("#txtId").val(data.id);
+                            $("#txtQuestion").val(data.text);
+                            $("#cbSurvey").val(data.surveyId);
+
+                            $("#btnEdit").show();
+                            $("#btnDelete").show();
+                            $("#btnCancel").show();
+                            $("#btnSave").hide();
+
+                            $("#editHeader").html("Soru Düzenle - Sil");
+                        },
+                        error: function () { }
+                    });
+                });
+
+                
+                $("#btnCancel").click(function () {
+                    $("#txtId").val("");
+                    $("#txtQuestion").val("");
+
+                    $("#btnEdit").hide();
+                    $("#btnDelete").hide();
+                    $("#btnCancel").hide();
+                    $("#btnSave").show();
+                    $("#editHeader").html("Soru Ekle");
+                });
+
+                
+                $("#btnEdit").click(function () {
+                    var id = $("#txtId").val();
+                    var text = $("#txtQuestion").val();
+                    var surveyId = $("#cbSurvey").val();
+                    var question = { Id: id, Text: text, SurveyId: surveyId };
+
+                    $.ajax({
+                        url: ApiBaseUrl + "Question",
+                        method: "PUT",
+                        headers: {
+                            "Authorization": "Bearer " + token
+                        },
+                        data: JSON.stringify(question),
+                        contentType: "application/json",
+                        success: function (data) {
+                            $("#result").show().removeClass().addClass(data.status ? "alert alert-success" : "alert alert-danger").html(data.message);
+                            QuestionList();
+                            $("#result").fadeOut(3000);
+                        },
+                        error: function () { }
+                    });
+                });
+
+               
+                $("#btnDelete").click(function () {
+                    var id = $("#txtId").val();
+                    $.ajax({
+                        url: ApiBaseUrl + "Question/" + id,
+                        method: "DELETE",
+                        headers: {
+                            "Authorization": "Bearer " + token
+                        },
+                        contentType: "application/json",
+                        success: function (data) {
+                            $("#result").show().removeClass().addClass(data.status ? "alert alert-success" : "alert alert-danger").html(data.message);
+                            QuestionList();
+                            $("#result").fadeOut(3000);
+                        },
+                        error: function () { }
+                    });
+                });
+            });
+        </script>
+}

@@ -1,0 +1,213 @@
+﻿
+@{
+    ViewData["Title"] = "GetListSurveys";
+}
+
+<div class="row">
+    <div class="col-md-12">
+        <div id="progress">
+            <div class="card shadow">
+                <div class="card-body">
+                    <h1>Anketler</h1>
+        <div class="table-responsive">
+        <table class="table table-bordered table-hover" id="tbSurveyList">
+            <thead>
+                <tr>
+                    
+                    
+                    <th>Adı</th> 
+                    <th>Açıklama</th> 
+                    <th>Durumu</th>
+
+                    <th>Kayıt T.</th>
+                    <th>Düzenleme T.</th>
+                    <th>İşlemler</th>
+                </tr>
+            </thead>
+
+            <tbody>
+            </tbody>
+        </table>
+        </div>
+        </div>
+        </div>
+        </div>
+        </div>
+        
+
+    </div>
+    
+
+    @section Scripts{
+    <script src="https://code.jquery.com/ui/1.13.3/jquery-ui.js"></script>
+                <script>
+                    $(document).ready(function () {
+                        var ApiBaseUrl = "@ViewBag.ApiBaseUrl";
+                        var catId = "@ViewBag.CatId";
+                        var token = localStorage.getItem("token");
+                        SurveyList();
+                        CategoriList();
+                        CategoryById();
+                        $("#btnEdit").hide();
+                        $("#editHeader").html("");
+                        $("#questioncard").hide();
+                        $("#btnDelete").hide();
+
+
+                        function CategoriList() {
+                            $.ajax({
+                                url: ApiBaseUrl + "Category",
+                                method: "GET",
+                                headers: {
+                                "Authorization": "Bearer " + token
+                                },
+                                contentType: "application/json",
+                                success: function (data) {
+                                    var opt = "";
+                                    $("#cbCategory").empty();
+                                    $.each(data, function (i, item) {
+
+                                        if (catId == item.id) {
+                                            opt = '<option value="' + item.id + '" selected>' + item.name + '</option>';
+                                        } else {
+                                            opt = '<option value="' + item.id + '">' + item.name + '</option>';
+                                        }
+
+                                        $("#cbCategory").append(opt);
+                                    });
+
+                                },
+                                error: function () { }
+                            });
+                        }
+                        function CategoryById() {
+                            $.ajax({
+                                url: ApiBaseUrl + "Category/" + catId,
+                                method: "GET",
+                                headers: {
+                                "Authorization": "Bearer " + token
+                                },
+                                contentType: "application/json",
+                                success: function (data) {
+                                    $("#catName").html("<b>" + data.name + "<b>");
+                                },
+                                error: function () { }
+                            });
+                        }
+                        function SurveyList() {
+                            $.ajax({
+                                url: ApiBaseUrl + "Survey",
+                                method: "GET",
+                                headers: {
+                                    "Authorization": "Bearer " + token
+                                },
+                                contentType: "application/json",
+                                success: function (data) {
+                                    SurveyListToTable(data);
+                                },
+                                error: function () { }
+                            });
+                        }
+                        function SurveyListToTable(data) {
+                            $("#tbSurveyList tbody").empty();
+                            var tr = '';
+                            $.each(data, function (i, item) {
+                                var bg = item.isActive ? 'bg-success' : 'bg-danger';
+
+                                            tr += '<tr><td>' + item.name + '</td><td>' + item.description + '</td><td><span class="badge ' + bg + '">' + (item.isActive ? 'Aktif' : 'Pasif') + '</span></td><td>' + FormatDate(item.created) + '</td><td>' + FormatDate(item.updated) + '</td>'
+
+                                if (item.isActive) {
+                                                    tr += '<td><a href="/Answer/' + item.id + '" class="btn btn-secondary btn-sm ">Ankete Katıl</a></td>';
+                                } else {
+                
+                                               tr += '<td></td>';
+                                }
+
+                                tr += '</tr>';
+                            });
+
+                            $("#tbSurveyList tbody").append(tr);
+                        }
+                        function FormatDate(d) {
+                            var date = new Date(d);
+                            var day = date.getDate() > 9 ? date.getDate() : '0' + date.getDate();
+                            var mount = date.getMonth() > 9 ? date.getMonth() : '0' + date.getMonth();
+                            var year = date.getFullYear();
+
+                            var hour = date.getHours() > 9 ? date.getHours() : '0' + date.getHours();
+                            var minute = date.getMinutes() > 9 ? date.getMinutes() : '0' + date.getMinutes();
+                            var second = date.getSeconds() > 9 ? date.getSeconds() : '0' + date.getSeconds();
+
+                            var fd = day + "." + mount + "." + year + " " + hour + ":" + minute + ":" + second;
+                            return fd
+                        }
+
+
+
+                    });
+
+                        $(document).on("click", ".questionadd", function () {
+                                    var id = $(this).attr("id");
+                                    $("#btnQueEdit").hide();
+                                    $("#btnQueDelete").hide();
+                                    $("#btnQueSave").show();
+                                    $("#btnQueCancel").show();
+
+                                    $("#questioncard").show();
+                                    $("#editHeader").html("Soru Ekle");
+
+                                });
+
+                        $("#btnQueSave").click(function () {
+                            var questionName = $("#txtQuestion").val();
+                            var question = {
+                                Text: questionName,
+                                YesNoAnswer: false, // Varsayılan olarak hayır olarak işaretlenmiştir
+                                SurveyId: catId
+                            };
+
+                                $(document).on("click", ".questionadd", function () {
+                                var id = $(this).attr("id");
+                                $("#btnQueEdit").hide();
+                                $("#btnQueDelete").hide();
+                                $("#btnQueSave").show();
+                                $("#btnQueCancel").hide();
+                                
+                                $("#questioncard").show();
+                                $("#editHeader").html("Soru Ekle");
+
+                            });
+
+                            
+                            $.ajax({
+                                url: ApiBaseUrl + "Question",
+                                method: "POST",
+                                data: JSON.stringify(question),
+                                contentType: "application/json",
+                                success: function (data) {
+                                    $("#result").show();
+                                    if (data.status) {
+                                        $("#result").removeClass().addClass("alert alert-success");
+                                        // Başarılı bir şekilde eklendikten sonra anket listesini yeniden yükle
+                                        SurveyList();
+                                    }
+                                    else {
+                                        $("#result").removeClass().addClass("alert alert-danger");
+                                    }
+                                    $("#result").html(data.message);
+                                    $("#result").fadeOut(3000);
+                                },
+                                error: function () { }
+                            });
+                        });
+
+                        $("#btnQueCancel").click(function () {
+                            // Soru eklemeyi iptal et, alanları temizle ve kartı gizle
+                            $("#txtQuestion").val("");
+                            $("#questioncard").hide();
+                            $("#editHeader").html("");
+                        });
+
+                </script>
+}
+

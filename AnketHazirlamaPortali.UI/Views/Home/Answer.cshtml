@@ -1,0 +1,124 @@
+﻿@{
+    ViewData["Title"] = "Answer";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container">
+    <h1 id="surveyTitle" class="mt-4"></h1>
+    <div id="surveyContainer" class="mt-4">
+        <!-- Sorular burada listelenecek -->
+    </div>
+    <button id="saveButton" class="btn btn-secondary mt-3">
+        <i class="fas fa-check-circle"></i>
+        <span>Yanıtları Kaydet</span>
+    </button>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            var ApiBaseUrl = "@ViewBag.ApiBaseUrl";
+            var surveyId = "@ViewBag.SurveyId";
+            var token = localStorage.getItem("token");
+            var userId = ''; var payload = parseJwt(token);
+            uid = payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"];
+
+            // Anketin adını getir
+            SurveyById();
+
+            // Seçilen anketin adını getiren fonksiyon
+            function SurveyById() {
+                $.ajax({
+                    url: ApiBaseUrl + "Survey/" + surveyId,
+                    method: "GET",
+                    headers: {
+                        "Authorization": "Bearer " + token
+                    },
+                    contentType: "application/json",
+                    success: function (data) {
+                        $("#surveyTitle").text(data.name); // Anketin ismini yaz
+                    },
+                    error: function () {
+                        console.error('Anket adı alınamadı.');
+                    }
+                });
+            }
+
+            // Anket sorularını al
+            $.ajax({
+                url: ApiBaseUrl + "Survey/" + surveyId + "/Questions",
+                method: 'GET',
+                headers: {
+                    "Authorization": "Bearer " + token
+                },
+                success: function (data) {
+                    var surveyContainer = $("#surveyContainer");
+                    surveyContainer.empty(); // Önceki içeriği temizle
+
+                    var i = 0;
+                    var say = 1;
+                    while (i < data.length) {
+                        var question = data[i];
+                        var questionHtml = '<div class="form-group">';
+                        questionHtml += '<label>' + say + '. ' + question.text + '</label>';
+
+                        // Açık uçlu soru (text input)
+                        questionHtml += '<input type="text" class="form-control" name="question_' + question.id + '">';
+
+                        questionHtml += '</div>';
+                        surveyContainer.append(questionHtml);
+                        i++;
+                        say++;
+                    }
+                },
+                error: function () {
+                    console.error('Anket soruları alınamadı.');
+                }
+            });
+
+            $("#saveButton").click(function () {
+                // Tüm soruların yanıtlarını al
+                var answers = [];
+                $("input[type='text']").each(function () {
+                    var nameAttr = $(this).attr("name");
+                    if (nameAttr && nameAttr.includes("question_")) {
+                        var questionId = nameAttr.split("_")[1];
+                        var answer = $.trim($(this).val()); // Boşlukları kaldıralım
+                        // Boş cevaplar için varsayılan bir değer atayalım
+                        answer = answer || "Boş cevap";
+                        // Her cevabı ayrı bir nesne olarak ekleyelim
+                        var answerObj = {
+                            UserId: uid,
+                            TextAnswer: answer,
+                            QuestionId: questionId
+                        };
+                        answers.push(answerObj);
+                    }
+                });
+
+                // Her bir cevabı ayrı bir nesne olarak gönderelim
+                answers.forEach(function (answerObj) {
+                    $.ajax({
+                        url: ApiBaseUrl + "Answer",
+                        method: "POST",
+                        headers: {
+                            "Authorization": "Bearer " + token
+                        },
+                        contentType: "application/json",
+                        data: JSON.stringify(answerObj),
+                        success: function (response) {
+                            alert("Cevap Kaydedildi")
+                        },
+                        error: function (xhr) {
+                            var errorMessage = "Yanıtlar kaydedilirken bir hata oluştu. Lütfen tekrar deneyin.";
+                            if (xhr.responseJSON && xhr.responseJSON.errors) {
+                                errorMessage = "Hata: " + JSON.stringify(xhr.responseJSON.errors);
+                            }
+                            alert(errorMessage);
+                        }
+                    });
+                });
+            });
+        });
+    </script>
+}

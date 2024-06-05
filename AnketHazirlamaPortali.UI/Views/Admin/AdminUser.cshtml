@@ -1,0 +1,266 @@
+﻿@{
+    ViewData["Title"] = "AdminUser";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-9">
+            <h2>Kullanıcılar</h2>
+        </div>
+        <div class="col-md-3 text-right">
+            <div class="input-group mb-3">
+                <input type="text" class="form-control" placeholder="Kullanıcı Adı Ara" id="searchInput">
+                <div class="input-group-append">
+                    <button class="btn btn-outline-secondary" type="button" id="searchButton">Ara</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <table class="table table-striped mt-3">
+        <thead>
+            <tr>
+                <th>Tam Adı</th>
+                <th>Kullanıcı Adı</th>
+                <th>Email Adresi</th>
+                <th>Rolü</th>
+                <th>İşlemler</th>
+            </tr>
+        </thead>
+        <tbody id="usersTableBody">
+        </tbody>
+    </table>
+</div>
+
+<div class="container mt-3">
+    <div class="row">
+        <div class="col-md-7">
+            <h2></h2>
+        </div>
+        <div class="col-md-5 text-center">
+            <div>
+                <div id="resultPopUp">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+<div class="modal fade" id="confirmationModal" tabindex="-1" role="dialog" aria-labelledby="confirmationModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmationModalLabel">Uyarı</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p id="confirmationMessage"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-success" id="confirmAction">Onayla</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            var ApiBaseUrl = "@ViewBag.ApiBaseUrl";
+
+            function listUsers() {
+                $.ajax({
+                    url: ApiBaseUrl + "User/List",
+                    method: 'GET',
+                    success: function (response) {
+                        renderUsers(response);
+                    },
+                    error: function (xhr, status, error) {
+                        console.log("Error in listing users: " + status + " - " + error);
+                    }
+                });
+            }
+
+            function getUserRoles(userId, callback) {
+                $.ajax({
+                    url: ApiBaseUrl + "User/GetRolesByUserId?userId=" + userId,
+                    method: 'GET',
+                    success: function (response) {
+                        callback(response);
+                    },
+                    error: function (xhr, status, error) {
+                        console.log("Error in fetching user roles: " + status + " - " + error);
+                        callback([]);
+                    }
+                });
+            }
+
+            function renderUsers(users) {
+                $('#usersTableBody').html('');
+                users.forEach(function (user) {
+                    console.log(user)
+                    var userHtml = `
+                                                <tr>
+                                                    <td>${user.fullName}</td>
+                                                    <td>${user.userName}</td>
+                                                    <td>${user.email}</td>
+                                                    <td id="userRolesContainer_${user.id}">Yükleniyor...</td>
+                                                    <td>
+                                                        <button class="btn btn-dark btn-sm makeAdminButton" data-userid="${user.id}" data-username="${user.userName}">Admin Yap</button>
+                                                        <button class="btn btn-secondary btn-sm makeMemberButton" data-userid="${user.id}" data-username="${user.userName}">Üye Yap</button>
+                                                        <button class="btn btn-danger btn-sm deleteUserButton" data-userid="${user.id}" data-username="${user.userName}">Kullanıcıyı Sil</button>
+                                                    </td>
+                                                </tr>
+                                            `;
+                    $('#usersTableBody').append(userHtml);
+
+                    getUserRoles(user.id, function (roles) {
+                        var rolesHtml = roles.join("<br>");
+                        $('#userRolesContainer_' + user.id).html(rolesHtml || 'Rol yok');
+                    });
+                });
+
+                $('.makeAdminButton').click(function () {
+                    var userId = $(this).data('userid');
+                    var userName = $(this).data('username');
+                    var confirmationMessage = userName + " kullanıcısını admin yapmak istiyor musunuz?";
+                    showConfirmationModal(confirmationMessage, function () {
+                        makeUserAdmin(userId);
+                    });
+                });
+
+                $('.makeMemberButton').click(function () {
+                    var userId = $(this).data('userid');
+                    var userName = $(this).data('username');
+                    var confirmationMessage = userName + " kullanıcısını üye yapmak istiyor musunuz?";
+                    showConfirmationModal(confirmationMessage, function () {
+                        makeUserMember(userId);
+                    });
+                });
+
+                $('.deleteUserButton').click(function () {
+                    var userId = $(this).data('userid');
+                    var userName = $(this).data('username');
+                    var confirmationMessage = userName + " kullanıcısını silmek istiyor musunuz?";
+                    showConfirmationModal(confirmationMessage, function () {
+                        deleteUser(userId);
+                    });
+                });
+            }
+
+            function makeUserAdmin(userId) {
+                $.ajax({
+                    url: ApiBaseUrl + "User/MakeAdmin?userId=" + userId,
+                    method: 'POST',
+                    success: function (response) {
+                        $("#resultPopUp")
+                            .show()
+                            .removeClass()
+                            .addClass("alert alert-success")
+                            .html("Kullanıcı başarıyla admin yapıldı.")
+                            .fadeOut(2500);
+                        listUsers();
+                    },
+                    error: function (xhr, status, error) {
+                        console.log("Error in making user admin: " + status + " - " + error);
+                        $("#resultPopUp")
+                            .show()
+                            .removeClass()
+                            .addClass("alert alert-danger")
+                            .html("Kullanıcı admin yapılamadı. Bir hata oluştu, lütfen tekrar deneyin.")
+                            .fadeOut(2500);
+                    }
+                });
+            }
+
+            function makeUserMember(userId) {
+                $.ajax({
+                    url: ApiBaseUrl + "User/MakeUser?userId=" + userId,
+                    method: 'POST',
+                    success: function (response) {
+                        $("#resultPopUp")
+                            .show()
+                            .removeClass()
+                            .addClass("alert alert-success")
+                            .html("Kullanıcı başarıyla üye yapıldı.")
+                            .fadeOut(2500);
+                        listUsers();
+                    },
+                    error: function (xhr, status, error) {
+                        console.log("Error in making user member: " + status + " - " + error);
+                        $("#resultPopUp")
+                            .show()
+                            .removeClass()
+                            .addClass("alert alert-danger")
+                            .html("Kullanıcı üye yapılamadı. Bir hata oluştu, lütfen tekrar deneyin.")
+                            .fadeOut(2500);
+                    }
+                });
+            }
+
+            function deleteUser(userId) {
+                $.ajax({
+                    url: ApiBaseUrl + "User/DeleteUser?userId=" + userId,
+                    method: 'DELETE',
+                    success: function (response) {
+                        $("#resultPopUp")
+                            .show()
+                            .removeClass()
+                            .addClass("alert alert-success")
+                            .html("Kullanıcı başarıyla silindi.")
+                            .fadeOut(2500);
+                        listUsers();
+                    },
+                    error: function (xhr, status, error) {
+                        console.log("Error in deleting user: " + status + " - " + error);
+                        $("#resultPopUp")
+                            .show()
+                            .removeClass()
+                            .addClass("alert alert-danger")
+                            .html("Kullanıcı silinemedi. Bir hata oluştu, lütfen tekrar deneyin.")
+                            .fadeOut(2500);
+                    }
+                });
+            }
+
+            function showConfirmationModal(message, callback) {
+                $('#confirmationMessage').text(message);
+                $('#confirmAction').off('click').on('click', function () {
+                    callback();
+                    $('#confirmationModal').modal('hide');
+                });
+                $('#confirmationModal').modal('show');
+            }
+
+            listUsers();
+
+            $('#searchButton').click(function () {
+                var searchTerm = $('#searchInput').val().trim();
+                if (searchTerm !== '') {
+                    searchUsers(searchTerm);
+                } else {
+                    listUsers();
+                }
+            });
+
+            function searchUsers(searchTerm) {
+                $.ajax({
+                    url: ApiBaseUrl + "User/GetByName?name=" + searchTerm,
+                    method: 'GET',
+                    success: function (response) {
+                        renderUsers([response]);
+                    },
+                    error: function (xhr, status, error) {
+                        console.log("Error in searching users: " + status + " - " + error);
+                    }
+                });
+            }
+
+        });
+    </script>
+}

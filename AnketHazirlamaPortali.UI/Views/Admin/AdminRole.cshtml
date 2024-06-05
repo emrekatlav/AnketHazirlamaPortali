@@ -1,0 +1,81 @@
+﻿@{
+    ViewData["Title"] = "AdminUser";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="content-wrapper">
+    <!-- Content Header (Page header) -->
+    <!-- /.content-header -->
+    <!-- Main content -->
+    <section class="content">
+        <div class="container-fluid">
+			<br />
+            <!-- /.row -->
+            <!-- Main row -->
+            <div class="row">
+                
+                <div class="col-md-12">
+                    <div class="card shadow">
+                        <div class="card-body">
+                            <h1>Roller</h1>
+                    <div id="progress">
+                        <div class="table-responsive">
+
+                            <table class="table table-bordered table-hover" id="tbRoleList">
+                                <thead>
+                                    <tr>
+
+                                        <th>Id</th>
+                                        <th>Role Adı</th>
+                                       
+
+                                    </tr>
+                                </thead>
+
+                                <tbody>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <!-- /.row (main row) -->
+            </div><!-- /.container-fluid -->
+    </section>
+    <!-- /.content -->
+</div>
+@section Scripts{
+    <script>
+        $(document).ready(function () {
+            var ApiBaseUrl = "@ViewBag.ApiBaseUrl";
+            RoleList();
+
+
+            function RoleList() {
+                $.ajax({
+                    url: ApiBaseUrl + "User/RoleList",
+                    method: "GET",
+                    contentType: "application/json",
+                    success: function (data) {
+                        RoleListToTable(data);
+                    },
+                    error: function () { }
+                });
+            }
+            function RoleListToTable(data) {
+                $("#tbRoleList tbody").empty();
+                var tr = '';
+                $.each(data, function (i, item) {
+
+
+                    tr += '<tr><td>' + item.id + '</td><td>' + item.name + '</td></tr>'
+                });
+
+                $("#tbRoleList tbody").append(tr);
+            }
+
+
+
+        });
+    </script>
+}
+
