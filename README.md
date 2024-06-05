@@ -1,1 +1,1 @@
-# AnketHazirlamaPortali.API
+# AnketHazirlamaPortali
